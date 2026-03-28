@@ -108,52 +108,6 @@ def test():
     y = net(x)
     print(y.size())
 
-def train_model(model, train_loader, epochs = 5, lr = 0.001, device = None):
-    if device is None:
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.to(device)
-    model.train()
-    optimizer = optim.Adam(model.parameters(), lr=lr)
-    criterion = nn.CrossEntropyLoss()
-
-    for epoch in range(epochs):
-        running_loss = 0.0
-        pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{epochs}")
-        for inputs, labels in pbar:
-            inputs, labels = inputs.to(device), labels.to(device)
-
-            optimizer.zero_grad()
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
-
-            running_loss += loss.item()
-            pbar.set_postfix({'loss': f'{running_loss/len(train_loader):.4f}'})
-
-    print("Training completed.")
-
-def evaluate_model(model, test_loader, device=None):
-    if device is None:
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.to(device)
-    model.eval()
-
-    correct = 0
-    total = 0
-
-    with torch.no_grad():
-        for inputs, labels in test_loader:
-            inputs, labels = inputs.to(device), labels.to(device)
-            outputs = model(inputs)
-            _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
-
-    accuracy = 100 * correct / total
-    return accuracy
-
-
 
 if __name__ == "__main__":    
     test()
