@@ -6,7 +6,7 @@ import os
 from datetime import datetime
 from tqdm import tqdm
 
-def train_model(model, train_loader, val_loader = None, epochs = 5, lr = 0.001, device = None, mode = "cifar", save_path = None):
+def train_model(model, train_loader, val_loader = None, epochs = 5, lr = 0.001, optimizer = None, device = None, mode = "cifar", save_path = None):
     if save_path is None:
         f_path = "./training_result/"
         f_name = mode + "_" + datetime.now().strftime("%Y%m%d%H%M")
@@ -17,7 +17,9 @@ def train_model(model, train_loader, val_loader = None, epochs = 5, lr = 0.001, 
     if device is None:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
-    optimizer = optim.Adam(model.parameters(), lr=lr)
+
+    if optimizer is None:
+        optimizer = optim.Adam(model.parameters(), lr=lr)
     criterion = nn.CrossEntropyLoss()
 
     best_val_acc = 0.0
