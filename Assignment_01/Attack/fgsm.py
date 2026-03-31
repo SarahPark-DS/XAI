@@ -2,7 +2,7 @@
 import torch
 import torch.nn as nn
 
-def fgsm_targeted(model, x, target, eps):
+def fgsm_targeted(model, x, target, eps, clip_min = 0.0, clip_max = 1.0):
     """
     model   : the neural network
     x       : input image tensor (reqruies_grad should be set)
@@ -27,12 +27,12 @@ def fgsm_targeted(model, x, target, eps):
 
     # Adversarial image 생성
     x_adv = x - eps * torch.sign(x.grad)
-    x_adv = torch.clamp(x_adv, 0, 1)
+    x_adv = torch.clamp(x_adv, clip_min, clip_max)
 
     return x_adv.detach()
 
 
-def fgsm_untargeted(model, x, label, eps):
+def fgsm_untargeted(model, x, label, eps, clip_min = 0.0, clip_max = 1.0):
     """
     model   : the neural network
     x       : input image tensor (reqruies_grad should be set)
@@ -58,7 +58,7 @@ def fgsm_untargeted(model, x, label, eps):
     # Adversarial image 생성
     x_adv = x + eps * torch.sign(x.grad)
 
-    x_adv = torch.clamp(x_adv, 0, 1)
+    x_adv = torch.clamp(x_adv, clip_min, clip_max)
 
     return x_adv.detach()
 
