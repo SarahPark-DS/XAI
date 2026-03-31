@@ -27,10 +27,7 @@ def fgsm_targeted(model, x, target, eps):
 
     # Adversarial image 생성
     x_adv = x - eps * torch.sign(x.grad)
-    
-    lower = (0-0.1307) / 0.3081 # MNIST 픽셀값 0이 정규화된 값 
-    upper = (1-0.1307) / 0.3081 # MNIST 픽셀값 1이 정규화된 값
-    x_adv = torch.clamp(x_adv, lower, upper)
+    x_adv = torch.clamp(x_adv, 0, 1)
 
     return x_adv.detach()
 
@@ -61,9 +58,7 @@ def fgsm_untargeted(model, x, label, eps):
     # Adversarial image 생성
     x_adv = x + eps * torch.sign(x.grad)
 
-    lower = (0-0.1307) / 0.3081 # MNIST 픽셀값 0이 정규화된 값
-    upper = (1-0.1307) / 0.3081 # MNIST 픽셀값 1이 정규화된 값
-    x_adv = torch.clamp(x_adv, lower, upper)
+    x_adv = torch.clamp(x_adv, 0, 1)
 
     return x_adv.detach()
 

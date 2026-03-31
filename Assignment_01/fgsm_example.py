@@ -15,6 +15,7 @@ from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 from mnist_cnn import *
 from fgsm import *
+from Model.utils import *
 
 def test_image(image, label, model, target_class, eps = 0.1, device = "cuda" if torch.cuda.is_available() else "cpu"):
     """
@@ -174,7 +175,7 @@ if __name__ == "__main__":
     # 데이터 로드
     transform = transforms.Compose([
     transforms.ToTensor(), # PyTorch 텐서로 변환
-    transforms.Normalize((0.1307,), (0.3081,)) # MNIST 평균 0.1307, 표준편차 0.3081로 정규화
+    # transforms.Normalize((0.1307,), (0.3081,)) # MNIST 평균 0.1307, 표준편차 0.3081로 정규화
     ])
 
     train_dataset = datasets.MNIST(root='./data', train=True, download=True, transform=transform)
@@ -185,24 +186,23 @@ if __name__ == "__main__":
 
     # 모델 로드
     model = MNIST_CNN()
-    files = glob.glob("./Model/training_result/mnist*.pt")
-    latest_file = max(files, key = lambda x: os.path.basename(x).replace("mnist_", ""))
-    model.load_state_dict(torch.load(latest_file, map_location = device))
+    model, _ = train_model(model, DataLoader(train_dataset, batch_size = 128, shuffle = True), device = device, epochs = 5, mode = "mnist")
+    # files = glob.glob("./Model/training_result/mnist*.pt")
+    # latest_file = max(files, key = lambda x: os.path.basename(x).replace("mnist_", ""))
+    # model.load_state_dict(torch.load(latest_file, map_location = device))
 
 
-    epsilon_list = [0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+    epsilon_list = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
 
     for eps in epsilon_list:
-        # print("="*70)
-        # print("Evaluating targeted attack for eps =", eps)
-        # for t in range(10):
-        #     evaluate_targeted_asr(model, DataLoader(test_dataset, batch_size = 128, shuffle = False), target_class = t, eps = eps, device = device, num_batches= float('inf'))
-
         print("="*70)
-        print("Evaluating untargeted attack for eps =", eps)
-        for t in range(10):
-            evaluate_untargeted_asr(model, DataLoader(test_dataset, batch_size = 128, shuffle = False), eps = eps, device = device, num_batches= 100)
+        print("Evaluating targeted attack for eps =", eps)
+        t = 4
+        evaluate_targeted_asr(model, DataLoader(test_dataset, batch_size = 128, shuffle = False), target_class = t, eps = eps, device = device, num_batches= float('inf'))
 
+        # print("="*70)
+        # print("Evaluating untargeted attack for eps =", eps)
+        # evaluate_untargeted_asr(model, DataLoader(test_dataset, batch_size = 128, shuffle = False), eps = eps, device = device, num_batches= 100)
 
 
 
