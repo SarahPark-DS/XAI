@@ -12,6 +12,7 @@ def fgsm_targeted(model, x, target, eps):
     """
 
     # requires_grad 설정
+    model.eval()
     x = x.clone().detach().requires_grad_(True)
 
     # Forward pass를 통한 logit 계산
@@ -25,39 +26,45 @@ def fgsm_targeted(model, x, target, eps):
     loss.backward()
 
     # Adversarial image 생성
-    x_adv = x - eps * x.grad.sign()
-    x_adv = torch.clamp(x_adv, 0, 1)
+    x_adv = x - eps * torch.sign(x.grad)
+    
+    lower = (0-0.1307) / 0.3081 # MNIST 픽셀값 0이 정규화된 값 
+    upper = (1-0.1307) / 0.3081 # MNIST 픽셀값 1이 정규화된 값
+    x_adv = torch.clamp(x_adv, lower, upper)
 
     return x_adv.detach()
 
 
-def evaluate_targeted_attack(model, loader, target_class, eps, device, num_batches = 10):
+def fgsm_untargeted(model, x, label, eps):
+    """
+    model   : the neural network
+    x       : input image tensor (reqruies_grad should be set)
+    label   : the true class label
+    eps     : perturbation magnitude
+    return  : adversarial image x_adv
+    """
+
+    # requires_grad 설정
     model.eval()
-    correct_clean = correct_adv = total = 0
+    x = x.clone().detach().requires_grad_(True)
 
-    for i, (images, labels) in enumerate(loader):
-        if i >= num_batches:
-            break
+    # Forward pass를 통한 logit 계산
+    output = model(x)
 
-        images, labels = images.to(device), labels.to(device)
+    # true 레이블에 대한 loss 계산 (cross-entropy)
+    loss = nn.CrossEntropyLoss()(output, label)
 
-        # target label: 모든 샘플을 target_class로 분류하도록 유도
-        targets = torch.full_like(labels, target_class)
+    # Gradient 계산
+    model.zero_grad()
+    loss.backward()
 
-        # Clean 정확도
-        with torch.no_grad():
-            clean_preds = model(images).argmax(dim = 1)
-            correct_clean += (clean_preds == labels).sum().item()
+    # Adversarial image 생성
+    x_adv = x + eps * torch.sign(x.grad)
 
-        # Adversarial 이미지 생성 및 예측
-        x_adv = fgsm_targeted(model, images, targets, eps)
-        with torch.no_grad():
-            adv_preds = model(x_adv).argmax(dim = 1)
-            correct_adv += (adv_preds == labels).sum().item()
+    lower = (0-0.1307) / 0.3081 # MNIST 픽셀값 0이 정규화된 값
+    upper = (1-0.1307) / 0.3081 # MNIST 픽셀값 1이 정규화된 값
+    x_adv = torch.clamp(x_adv, lower, upper)
 
-        total += labels.size(0)
+    return x_adv.detach()
 
-    
-    print(f"[eps={eps}] Clean Acc: {correct_clean/total:.4f} | "
-          f"Adv Acc (targeted→{target_class}): {correct_adv/total:.4f} | "
-          f"Attack Success: {1 - correct_adv/total:.4f}")
+
