@@ -9,9 +9,8 @@ from tqdm import tqdm
 
 def train_model(model, train_loader, val_loader = None, epochs = 5, lr = 0.001, optimizer = None, device = None, mode = "cifar", save_path = None):
     if save_path is None:
-        f_path = "./training_result/"
-        f_name = mode + "_" + datetime.now().strftime("%Y%m%d%H%M")
-        save_path = os.path.join(f_path, f_name + ".pt")
+        f_path = "/home/master2/Desktop/saehee/XAI/Assignment_01/Model/training_result"
+        save_path = os.path.join(f_path, mode + ".pt")
 
     os.makedirs(os.path.dirname(save_path), exist_ok = True)
     
