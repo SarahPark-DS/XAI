@@ -21,6 +21,7 @@ from tensorflow.keras.datasets import cifar10 # change the dataset to cifar10
 from tensorflow.keras.models import load_model
 import imageio # scipy.misc.imsave is deprecated, use imageio.imwrite instead
 import os
+import json
 from tqdm import tqdm
 
 from utils import *
@@ -45,6 +46,11 @@ parser.add_argument('-occl_size', '--occlusion_size', help="occlusion size", def
 
 args = parser.parse_args()
 
+# random seed 고정
+random.seed(42)
+np.random.seed(42)
+
+
 # input image dimensions
 img_rows, img_cols, img_channels = 64, 64, 3
 # the data, shuffled and split between train and test sets
@@ -67,6 +73,7 @@ os.makedirs(output_dir, exist_ok=True)  # create the directory to save generated
 # ==============================================================================================
 # start gen inputs
 disagree_count = 0
+
 
 for _ in tqdm(range(args.seeds), desc = "Processing seeds"):
     # gen_img = np.expand_dims(random.choice(x_test), axis=0)
@@ -154,7 +161,33 @@ for _ in tqdm(range(args.seeds), desc = "Processing seeds"):
             imageio.imwrite(f'{output_dir}/{args.transformation}_{orig_label_name}_{CIFAR10_CLASSES[pred1_new]}_{CIFAR10_CLASSES[pred2_new]}_{idx}_{iters}_orig.png', orig_deprocessed)
             break
 
+
 print(f'\nTotal disagreements: {disagree_count}')
 nc1 = neuron_covered(model_layer_dict1)
 nc2 = neuron_covered(model_layer_dict2)
-print(f'Final coverage: model1={nc1[2]:.3f}, model2={nc2[2]:.3f}')    
+print(f'Final coverage: model1={nc1[2]:.3f}, model2={nc2[2]:.3f}') 
+
+results = {
+    "transformation": args.transformation,
+    "total_disagreements": disagree_count,
+    "total_seeds": args.seeds,
+    "final_coverage_model1": nc1[2],
+    "final_coverage_model2": nc2[2],
+    "hyperparameters": {
+        "weight_diff": args.weight_diff,
+        "weight_nc": args.weight_nc,
+        "step": args.step,
+        "grad_iterations": args.grad_iterations,
+        "threshold": args.threshold,
+        "target_model": args.target_model,
+        "start_point": args.start_point,
+        "occlusion_size": args.occlusion_size
+    }
+}
+
+with open(f'{output_dir}/results_summary.json', 'w') as f:
+    json.dump(results, f, indent=4)
+
+
+
+
