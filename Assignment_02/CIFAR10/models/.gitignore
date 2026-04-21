@@ -1,2 +1,5 @@
+generated_inputs/
 *.h5
-*.keras
+run_all.log
+run_all.sh
+../../deepexplore
