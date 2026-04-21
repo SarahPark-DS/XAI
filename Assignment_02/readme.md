@@ -55,7 +55,7 @@ python test.py
 - **Model B**: ResNet50, random seed=222, AdamW optimizer (lr=0.001, weight_decay=0.01), strong augmentation
 
 ## DeepXplore 수정 사항
-Python = 3.11 와 Tensorflow = x.xx에 맞게 조정되었으며, CIFAR-10과 ResNet50에 맞춰 일부 코드 수정함.
+Python = 3.11 와 Tensorflow = 2.21.0에 맞게 조정되었으며, CIFAR-10과 ResNet50에 맞춰 일부 코드 수정함.
 
 1. 데이터셋: MNIST → CIFAR-10 (64×64로 리사이즈)
 2. 모델: 소형 모델 3개 → ResNet50 2개
