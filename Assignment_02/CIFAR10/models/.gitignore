@@ -1,5 +1,4 @@
 generated_inputs/
-*.h5
 run_all.log
 run_all.sh
 ../../deepexplore
