@@ -55,22 +55,21 @@ def visualize_disagreements(input_dir, transformation, n=3):
 
         if os.path.exists(orig_path):
             orig_img = imageio.imread(orig_path)
+            
+            # 원본 이미지에 대한 예측도 추가
+            orig_pred1, orig_conf1 = get_prediction(model1, orig_img)
+            orig_pred2, orig_conf2 = get_prediction(model2, orig_img)
+            
             axes[i][0].imshow(orig_img)
-            axes[i][0].set_title(f'Original\nTrue: {orig_class}', fontsize=11)
+            axes[i][0].set_title(
+                f'Original (True: {orig_class})\nModel A: {orig_pred1} ({orig_conf1:.2f})\nModel B: {orig_pred2} ({orig_conf2:.2f})',
+                fontsize=11
+            )
             axes[i][1].imshow(img)
             axes[i][1].set_title(
                 f'Modified ({transformation})\nModel A: {pred1} ({conf1:.2f})\nModel B: {pred2} ({conf2:.2f})',
                 fontsize=11
             )
-        else:
-            axes[i][0].imshow(img)
-            axes[i][0].set_title(f'True: {orig_class}', fontsize=11)
-            axes[i][1].text(0.5, 0.5,
-                f'Model A: {pred1}\nconf: {conf1:.2f}\n\nModel B: {pred2}\nconf: {conf2:.2f}',
-                ha='center', va='center', fontsize=13,
-                transform=axes[i][1].transAxes
-            )
-            axes[i][1].axis('off')
 
         for ax in axes[i]:
             ax.axis('off')
