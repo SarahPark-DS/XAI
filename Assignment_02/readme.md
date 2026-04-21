@@ -29,6 +29,16 @@ python train.py
 python train.py --img_size 64 --epochs 10 --batch_size 32 --weights imagenet
 ```
 
+## DeepXplore 실행
+```bash
+cd Assignment_02/CIFAR10/models
+
+# 단일 transformation 실행
+python gen_diff.py light 1.0 0.1 0.05 100 50 0.5
+
+#데모 실행
+python test.py
+```
 ### Arguments
 | Argument | Description | Example |
 |---|---|---|
@@ -40,20 +50,9 @@ python train.py --img_size 64 --epochs 10 --batch_size 32 --weights imagenet
 | grad_iterations | Gradient descent iterations | 50 |
 | threshold | Neuron activation threshold | 0.5 |
 
-## DeepXplore 실행
-```bash
-cd Assignment_02/CIFAR10/models
-
-# 단일 transformation 실행
-python gen_diff.py light 1.0 0.1 0.05 100 50 0.5
-
-#데모 실행
-python test.py
-```
-
 ## Model Configuration
-- **Model A**: ResNet50, random seed=42, SGD optimizer (lr=0.01, momentum=0.9), basic augmentation
-- **Model B**: ResNet50, random seed=777, AdamW optimizer (lr=0.001, weight_decay=0.01), strong augmentation
+- **Model A**: ResNet50, random seed=111, SGD optimizer (lr=0.01, momentum=0.9), basic augmentation
+- **Model B**: ResNet50, random seed=222, AdamW optimizer (lr=0.001, weight_decay=0.01), strong augmentation
 
 ## DeepXplore 수정 사항
 Python = 3.11 와 Tensorflow = x.xx에 맞게 조정되었으며, CIFAR-10과 ResNet50에 맞춰 일부 코드 수정함.
