@@ -1,6 +1,5 @@
 # verify.py
 import numpy as np
-import torch
 import os
 import time
 from torchvision import datasets, transforms
@@ -51,7 +50,7 @@ def run_verification(x, true_class, epsilon=0.01):
     x          : (784,) numpy array, normalized input
     true_class : int, 0–25
     epsilon    : float, ℓ∞ perturbation radius
-    return     : dict with exitCode, time, adv_class (if SAT)
+    return     : dict with exitCode, time, adv_class, adv_input
     """
     elapsed = 0.0
 
@@ -82,15 +81,17 @@ def run_verification(x, true_class, epsilon=0.01):
         elapsed += time.time() - start
 
         if exitCode == "sat":
+            adv_input  = np.array([vals[v] for v in inputVars_j])
             adv_output = np.array([vals[v] for v in outputVars_j])
             return {
                 "exitCode" : "sat",
                 "time"     : elapsed,
-                "adv_class": int(np.argmax(adv_output))
+                "adv_class": int(np.argmax(adv_output)),
+                "adv_input": adv_input
             }
 
     # 모든 j에 대해 UNSAT → property 성립
-    return {"exitCode": "unsat", "time": elapsed, "adv_class": None}
+    return {"exitCode": "unsat", "time": elapsed, "adv_class": None, "adv_input": None}
 
 
 if __name__ == "__main__":
@@ -99,9 +100,14 @@ if __name__ == "__main__":
     print(f"Sample index : {idx}")
     print(f"True label   : {label} ('{chr(ord('a') + int(label))}')")
 
-    for eps in [0.01, 0.05, 0.1]:
-        print(f"\nRunning Marabou (ε={eps}) ...")
-        res = run_verification(x, int(label), epsilon=eps)
-        status  = res['exitCode'].upper()
-        adv_str = f"→ adv: '{chr(ord('a') + res['adv_class'])}'" if res['adv_class'] is not None else ""
-        print(f"ε={eps:<5} → {status:<6} {res['time']:.2f}s  {adv_str}")
+    print(f"\nRunning Marabou (ε=0.01) ...")
+    res = run_verification(x, int(label), epsilon=0.01)
+
+    print(f"Exit code : {res['exitCode']}")
+    print(f"Time      : {res['time']:.2f}s")
+    if res["exitCode"] == "unsat":
+        print(f"Result    : UNSAT ✅")
+        print(f"  → All inputs within ε=0.01 of sample '{chr(ord('a') + int(label))}' are verified to predict the same class.")
+    elif res["exitCode"] == "sat":
+        print(f"Result    : SAT ⚠️  (counterexample found)")
+        print(f"  → Adversarial class: {res['adv_class']} ('{chr(ord('a') + res['adv_class'])}')")
