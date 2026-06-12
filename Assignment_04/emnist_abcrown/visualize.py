@@ -24,8 +24,21 @@ COLORS = {
     "agree"    : "#1D9E75",
     "disagree" : "#E24B4A",
 }
+import matplotlib.font_manager as fm
+
+# NanumSquare 한글 폰트 등록 (없으면 DejaVu Sans 사용)
+_KR_FONT = "DejaVu Sans"
+for _fp in [
+    "/usr/share/fonts/truetype/nanum/NanumSquareR.ttf",
+    "/usr/share/fonts/truetype/nanum/NanumSquareRoundR.ttf",
+]:
+    if os.path.exists(_fp):
+        fm.fontManager.addfont(_fp)
+        _KR_FONT = fm.FontProperties(fname=_fp).get_name()
+        break
+
 plt.rcParams.update({
-    "font.family"      : "DejaVu Sans",
+    "font.family"      : _KR_FONT,
     "axes.spines.top"  : False,
     "axes.spines.right": False,
     "figure.facecolor" : "white",
@@ -101,7 +114,6 @@ def plot_time_scatter(results: list, marabou_df: pd.DataFrame, out_dir: str) -> 
     mar = marabou_df.copy()
     mar["sample_idx"] = mar["sample_idx"].astype(str)
 
-    # Merge on sample_idx and label
     merged = pd.merge(
         df_abc,
         mar.rename(columns={"marabou_time_s": "time_marabou",
@@ -115,34 +127,75 @@ def plot_time_scatter(results: list, marabou_df: pd.DataFrame, out_dir: str) -> 
 
     merged["result_marabou_norm"] = merged["result_marabou"].map(_normalize_result)
 
-    fig, ax = plt.subplots(figsize=(7, 6))
+    # 0 시간 방지 (log scale용 최솟값 클리핑)
+    eps_t = 1e-3
+    merged["time_s_safe"] = merged["time_s"].clip(lower=eps_t)
+    merged["time_marabou_safe"] = merged["time_marabou"].clip(lower=eps_t)
+    speedup = (merged["time_marabou_safe"] / merged["time_s_safe"]).dropna()
 
-    for r in ("verified", "falsified", "timeout"):
+    # ── 2-패널 레이아웃 ─────────────────────────────────────────────
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+    fig.suptitle("Verification Time: Marabou vs α,β-Crown  (per sample, 260 instances)",
+                 fontsize=13, y=1.01)
+
+    LABELS = {"verified": "Verified", "falsified": "Falsified", "timeout": "Timeout"}
+
+    # ── 왼쪽: 로그-로그 산점도 ─────────────────────────────────────
+    ax = axes[0]
+    for r in ("verified", "falsified"):
         sub = merged[merged["result_norm"] == r]
         if not sub.empty:
             ax.scatter(
-                sub["time_marabou"], sub["time_s"],
-                c=COLORS[r], label=f"α,β-Crown: {r} (n={len(sub)})",
-                alpha=0.7, s=40, edgecolors="none"
+                sub["time_marabou_safe"], sub["time_s_safe"],
+                c=COLORS[r], label=f"{LABELS[r]} (n={len(sub)})",
+                alpha=0.75, s=45, edgecolors="white", linewidths=0.4
             )
 
-    # Diagonal y=x reference line (equal speed)
-    lim_max = max(merged["time_marabou"].max(), merged["time_s"].max()) * 1.1
-    ax.plot([0, lim_max], [0, lim_max], "k--", linewidth=0.8, alpha=0.4, label="Equal speed")
-    ax.set_xlim(0, lim_max)
-    ax.set_ylim(0, max(merged["time_s"].max() * 1.2, 1))
+    # y=x 기준선
+    lim_min = min(merged["time_marabou_safe"].min(), merged["time_s_safe"].min()) * 0.5
+    lim_max = max(merged["time_marabou_safe"].max(), merged["time_s_safe"].max()) * 2
+    ax.plot([lim_min, lim_max], [lim_min, lim_max],
+            "k--", linewidth=1.2, alpha=0.5, label="y = x  (동일 속도)")
 
-    ax.set_xlabel("Marabou time (s)", fontsize=11)
-    ax.set_ylabel("α,β-Crown time (s)", fontsize=11)
-    ax.set_title("Verification Time: Marabou vs α,β-Crown  (per sample)", fontsize=12)
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    ax.set_xlim(lim_min, lim_max)
+    ax.set_ylim(lim_min, lim_max)
+    ax.set_xlabel("Marabou 검증 시간 (s, 로그 스케일)", fontsize=11)
+    ax.set_ylabel("α,β-Crown 검증 시간 (s, 로그 스케일)", fontsize=11)
+    ax.set_title("로그-로그 산점도\n(y=x 아래 = α,β-Crown 더 빠름)", fontsize=11)
     ax.legend(fontsize=9)
+    ax.grid(True, which="both", linestyle="--", alpha=0.3)
 
-    # Annotate median speedup
-    speedup = (merged["time_marabou"] / merged["time_s"].replace(0, np.nan)).dropna()
     if len(speedup) > 0:
-        ax.text(0.97, 0.05, f"Median speedup: {speedup.median():.1f}×",
+        ax.text(0.97, 0.05, f"중앙값 속도 향상: {speedup.median():.0f}×",
                 transform=ax.transAxes, ha="right", fontsize=10,
                 color=COLORS["abcrown"], fontweight="bold")
+
+    # ── 오른쪽: 속도 향상(speedup) 히스토그램 ─────────────────────
+    ax2 = axes[1]
+    speedup_log = np.log10(speedup.clip(lower=1))
+    bins = np.linspace(0, speedup_log.max() * 1.05, 25)
+
+    for r in ("verified", "falsified"):
+        sub = merged[merged["result_norm"] == r]
+        if not sub.empty:
+            sp = np.log10((sub["time_marabou_safe"] / sub["time_s_safe"]).clip(lower=1))
+            ax2.hist(sp, bins=bins, color=COLORS[r], alpha=0.75,
+                     label=f"{LABELS[r]} (n={len(sub)})", edgecolor="white")
+
+    # x축 눈금을 실제 배수로 표시
+    tick_vals = [1, 10, 100, 1000]
+    ax2.set_xticks([np.log10(v) for v in tick_vals])
+    ax2.set_xticklabels([f"{v}×" for v in tick_vals], fontsize=10)
+    ax2.axvline(np.log10(speedup.median()), color="gray", linestyle="--",
+                linewidth=1.2, label=f"중앙값 {speedup.median():.0f}×")
+
+    ax2.set_xlabel("Marabou 대비 속도 향상 배수 (로그 스케일)", fontsize=11)
+    ax2.set_ylabel("샘플 수", fontsize=11)
+    ax2.set_title("속도 향상 분포\n(α,β-Crown이 Marabou보다 몇 배 빠른가)", fontsize=11)
+    ax2.legend(fontsize=9)
+    ax2.grid(True, axis="y", linestyle="--", alpha=0.3)
 
     plt.tight_layout()
     path = os.path.join(out_dir, "fig2_time_comparison_scatter.png")
